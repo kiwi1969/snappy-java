@@ -383,6 +383,18 @@ public class Snappy
         return impl.maxCompressedLength(byteSize);
     }
 
+     /**
+     * compress using ByteBuffers - doesn't use UnSafe
+     *
+     * @param uncompressed inputByteBuffer to read from
+     * @param compressed outputByteBuffer to write to
+     * @throws IOException
+     */
+    rawcompress(ByteBuffer uncompressed, ByteBuffer compressed)
+    {
+        //TODO
+    }
+    
     /**
      * Zero-copy compress using memory addresses.
      *
