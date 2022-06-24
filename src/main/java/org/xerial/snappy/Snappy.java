@@ -131,12 +131,14 @@ public class Snappy
      * @param uncompressed buffer[pos() ... limit()) containing the input data
      * @param compressed output of the compressed data. Uses range [pos()..].
      * @return byte size of the compressed data.
-     * @throws SnappyError when the input is not a direct buffer
+     * @throws SnappyError when the not using PureJava and input is not a direct buffer
      */
     public static int compress(ByteBuffer uncompressed, ByteBuffer compressed)
             throws IOException
     {
-
+        if (isPureJava())
+            return rawcompress(ByteBuffer uncompressed, ByteBuffer compressed);
+        
         if (!uncompressed.isDirect()) {
             throw new SnappyError(SnappyErrorCode.NOT_A_DIRECT_BUFFER, "input is not a direct buffer");
         }
