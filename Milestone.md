@@ -1,5 +1,24 @@
 Since version 1.1.0.x, Java 6 (1.6) or higher is required.
 
+## snappy-java-1.1.8.3 (2021-01-20)
+ * Make pure-java Snappy thread-safe [#271](https://github.com/xerial/snappy-java/pull/271)
+ * Improved SnappyFramedInput/OutputStream performance by using java.util.zip.CRC32C [#269](https://github.com/xerial/snappy-java/pull/269)
+
+## snappy-java-1.1.8.2 (2020-11-28)
+ * Support Apple Silicon (M1, Mac-aarch64)
+ * Fixed the pure-java Snappy fallback logic when no native library for your platform is found.
+
+## snappy-java-1.1.8.1 (2020-11-09)
+ * Fixed an initialization issue when using a recent Mac OS X version [#265](https://github.com/xerial/snappy-java/pull/265)
+
+## snappy-java-1.1.8 (2020-10-20)
+ * Upgrade to [Snappy 1.1.8](https://github.com/google/snappy/releases/tag/1.1.8) with small performance improvements. 
+
+## snappy-java-1.1.7.8 (2020-10-20)
+ * Big-endian support for pure-java Snappy implementation
+ * linux-aarch64 (arm64) binary embeds libstdc++ for portability
+ * internal: Fix make native-all target to support the latest version of dockcross 
+
 ## snappy-java-1.1.7.7 (2020-08-25)
  * Built snappy-java with jdk8 to resolve #251 (java.lang.NoSuchMethodError)
 

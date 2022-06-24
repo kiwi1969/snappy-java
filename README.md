@@ -1,7 +1,6 @@
 snappy-java [![Build Status](https://travis-ci.org/xerial/snappy-java.svg?branch=master)](https://travis-ci.org/xerial/snappy-java) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/) [![Javadoc](http://javadoc-badge.appspot.com/org.xerial.snappy/snappy-java.svg?label=javadoc)](http://javadoc-badge.appspot.com/org.xerial.snappy/snappy-java) 
 === 
-snappy-java is a Java port of the snappy
-<http://code.google.com/p/snappy/>, a fast C++ compresser/decompresser developed by Google.
+snappy-java is a Java port of the [snappy](https://github.com/google/snappy), a fast C++ compresser/decompresser developed by Google.
 
 ## Features
   * Fast compression/decompression around 200~400MB/sec.
@@ -9,8 +8,9 @@ snappy-java is a Java port of the snappy
   * JNI-based implementation to achieve comparable performance to the native C++ version.
      * Although snappy-java uses JNI, it can be used safely with multiple class loaders (e.g. Tomcat, etc.).
   * Compression/decompression of Java primitive arrays (`float[]`, `double[]`, `int[]`, `short[]`, `long[]`, etc.)
-     * To improve the compression ratios of these arrays, you can use a fast data-rearrangement implementation ([`BitShuffle`](https://oss.sonatype.org/service/local/repositories/releases/archive/org/xerial/snappy/snappy-java/1.1.3-M1/snappy-java-1.1.3-M1-javadoc.jar/!/org/xerial/snappy/BitShuffle.html)) before compression
-  * Portable across various operating systems; Snappy-java contains native libraries built for Window/Mac/Linux (64-bit). snappy-java loads one of these libraries according to your machine environment (It looks system properties, `os.name` and `os.arch`).
+     * To improve the compression ratios of these arrays, you can use a fast data-rearrangement implementation ([`BitShuffle`](https://oss.sonatype.org/service/local/repositories/releases/archive/org/xerial/snappy/snappy-java/1.1.8/snappy-java-1.1.8-javadoc.jar/!/org/xerial/snappy/BitShuffle.html)) before compression
+  * Portable across various operating systems; Snappy-java contains native libraries built for Window/Mac/Linux, etc. snappy-java loads one of these libraries according to your machine environment (It looks system properties, `os.name` and `os.arch`).
+     * If no native library for your platform is found, snappy-java will fallback to [pure-java implementation](#using-pure-java-snappy-implementation).
   * Simple usage. Add the snappy-java-(version).jar file to your classpath. Then call compression/decompression methods in `org.xerial.snappy.Snappy`.
   * [Framing-format support](https://github.com/google/snappy/blob/master/framing_format.txt) (Since 1.1.0 version)
   * OSGi support
@@ -22,7 +22,7 @@ snappy-java is a Java port of the snappy
   * Here are some [benchmark results](https://github.com/ning/jvm-compressor-benchmark/wiki), comparing
  snappy-java and the other compressors
  `LZO-java`/`LZF`/`QuickLZ`/`Gzip`/`Bzip2`. Thanks [Tatu Saloranta @cotowncoder](http://twitter.com/#!/cowtowncoder) for providing the benchmark suite.
-  * The benchmark result indicates snappy-java is the fastest compreesor/decompressor in Java: http://ning.github.com/jvm-compressor-benchmark/results/canterbury-roundtrip-2011-07-28/index.html
+  * The benchmark result indicates snappy-java is the fastest compressor/decompressor in Java: http://ning.github.com/jvm-compressor-benchmark/results/canterbury-roundtrip-2011-07-28/index.html
  * The decompression speed is twice as fast as the others: http://ning.github.com/jvm-compressor-benchmark/results/canterbury-uncompress-2011-07-28/index.html
 
 
