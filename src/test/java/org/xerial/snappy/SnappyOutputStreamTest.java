@@ -34,6 +34,7 @@ import java.lang.ref.WeakReference;
 import java.nio.ByteOrder;
 
 import org.junit.Test;
+import org.junit.Assert;
 import org.xerial.snappy.buffer.BufferAllocatorFactory;
 import org.xerial.snappy.buffer.CachedBufferAllocator;
 import org.xerial.snappy.buffer.DefaultBufferAllocator;
@@ -106,6 +107,17 @@ public class SnappyOutputStreamTest
         is.close();
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidBlockSize()
+            throws Exception
+    {
+        // We rely on catch below, if there is no error this test will pass
+        // This can be done better with Assertions.assertThrows
+        Boolean exceptionThrown = false;
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        SnappyOutputStream os = new SnappyOutputStream(b, 1024 * 1024 * 1024);
+    }
+
     @Test
     public void smallWrites()
             throws Exception
@@ -167,6 +179,9 @@ public class SnappyOutputStreamTest
         // compression quality:
         if (ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN)
             assertEquals(90992, expectedCompressedData.length);
+        else if(OSInfo.getArchName() == "aarch64")
+            // Arm has a better compression ratio
+            assertEquals(91051, expectedCompressedData.length);
         else
             assertEquals(91080, expectedCompressedData.length);
         // The chunk size should not affect the size of the compressed output:

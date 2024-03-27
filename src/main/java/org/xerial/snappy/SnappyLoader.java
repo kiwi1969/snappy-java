@@ -24,10 +24,10 @@
 //--------------------------------------
 package org.xerial.snappy;
 
-import org.xerial.snappy.pure.PureJavaSnappy;
-
 import java.io.*;
+import java.net.JarURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.Enumeration;
 import java.util.Properties;
 import java.util.UUID;
@@ -149,29 +149,13 @@ public class SnappyLoader
         loadSnappySystemProperties();
     }
 
-    static synchronized boolean isPureJava() {
-        return snappyApi != null && PureJavaSnappy.class.isAssignableFrom(snappyApi.getClass());
-    }
-
     static synchronized SnappyApi loadSnappyApi()
     {
         if (snappyApi != null) {
             return snappyApi;
         }
-        try {
-            if(Boolean.parseBoolean(System.getProperty(KEY_SNAPPY_PUREJAVA, "false"))) {
-                // Use pure-java Snappy implementation
-                setSnappyApi(new PureJavaSnappy());
-            }
-            else {
-                loadNativeLibrary();
-                setSnappyApi(new SnappyNative());
-            }
-        }
-        catch(Throwable e) {
-            // Fall-back to pure-java Snappy implementation
-            setSnappyApi(new PureJavaSnappy());
-        }
+        loadNativeLibrary();
+        setSnappyApi(new SnappyNative());
         return snappyApi;
     }
 
@@ -253,7 +237,7 @@ public class SnappyLoader
             InputStream reader = null;
             FileOutputStream writer = null;
             try {
-                reader = SnappyLoader.class.getResourceAsStream(nativeLibraryFilePath);
+                reader = getResourceAsInputStream(nativeLibraryFilePath);
                 try {
                     writer = new FileOutputStream(extractedLibFile);
 
@@ -291,7 +275,7 @@ public class SnappyLoader
                 InputStream nativeIn = null;
                 InputStream extractedLibIn = null;
                 try {
-                    nativeIn = SnappyLoader.class.getResourceAsStream(nativeLibraryFilePath);
+                    nativeIn = getResourceAsInputStream(nativeLibraryFilePath);
                     extractedLibIn = new FileInputStream(extractedLibFile);
 
                     if (!contentsEquals(nativeIn, extractedLibIn)) {
@@ -411,5 +395,17 @@ public class SnappyLoader
             System.err.println(e);
         }
         return version;
+    }
+
+    private static InputStream getResourceAsInputStream(String resourcePath) throws IOException {
+        URL url = SnappyLoader.class.getResource(resourcePath);
+        URLConnection connection = url.openConnection();
+        if (connection instanceof JarURLConnection) {
+            JarURLConnection jarConnection = (JarURLConnection) connection;
+            jarConnection.setUseCaches(false);  // workaround for https://bugs.openjdk.org/browse/JDK-8205976
+            return jarConnection.getInputStream();
+        } else {
+            return connection.getInputStream();
+        }
     }
 }

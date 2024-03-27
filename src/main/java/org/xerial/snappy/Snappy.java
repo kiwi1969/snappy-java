@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Properties;
@@ -154,7 +155,7 @@ public class Snappy
 
         //         pos  limit
         // [ ......BBBBBBB.........]
-        compressed.limit(cPos + compressedSize);
+        ((Buffer) compressed).limit(cPos + compressedSize);
 
         return compressedSize;
     }
@@ -168,7 +169,11 @@ public class Snappy
     public static byte[] compress(char[] input)
             throws IOException
     {
-        return rawCompress(input, input.length * 2); // char uses 2 bytes
+        int byteSize = input.length * 2;
+        if (byteSize < input.length) {
+            throw new SnappyError(SnappyErrorCode.TOO_LARGE_INPUT, "input array size is too large: " + input.length);
+        }
+        return rawCompress(input, byteSize); // char uses 2 bytes
     }
 
     /**
@@ -180,7 +185,11 @@ public class Snappy
     public static byte[] compress(double[] input)
             throws IOException
     {
-        return rawCompress(input, input.length * 8); // double uses 8 bytes
+        int byteSize = input.length * 8;
+        if (byteSize < input.length) {
+            throw new SnappyError(SnappyErrorCode.TOO_LARGE_INPUT, "input array size is too large: " + input.length);
+        }
+        return rawCompress(input, byteSize); // double uses 8 bytes
     }
 
     /**
@@ -192,7 +201,11 @@ public class Snappy
     public static byte[] compress(float[] input)
             throws IOException
     {
-        return rawCompress(input, input.length * 4); // float uses 4 bytes
+        int byteSize = input.length * 4;
+        if (byteSize < input.length) {
+            throw new SnappyError(SnappyErrorCode.TOO_LARGE_INPUT, "input array size is too large: " + input.length);
+        }
+        return rawCompress(input, byteSize); // float uses 4 bytes
     }
 
     /**
@@ -204,7 +217,11 @@ public class Snappy
     public static byte[] compress(int[] input)
             throws IOException
     {
-        return rawCompress(input, input.length * 4); // int uses 4 bytes
+        int byteSize = input.length * 4;
+        if (byteSize < input.length) {
+            throw new SnappyError(SnappyErrorCode.TOO_LARGE_INPUT, "input array size is too large: " + input.length);
+        }
+        return rawCompress(input, byteSize); // int uses 4 bytes
     }
 
     /**
@@ -216,7 +233,11 @@ public class Snappy
     public static byte[] compress(long[] input)
             throws IOException
     {
-        return rawCompress(input, input.length * 8); // long uses 8 bytes
+        int byteSize = input.length * 8;
+        if (byteSize < input.length) {
+            throw new SnappyError(SnappyErrorCode.TOO_LARGE_INPUT, "input array size is too large: " + input.length);
+        }
+        return rawCompress(input, byteSize); // long uses 8 bytes
     }
 
     /**
@@ -228,7 +249,11 @@ public class Snappy
     public static byte[] compress(short[] input)
             throws IOException
     {
-        return rawCompress(input, input.length * 2); // short uses 2 bytes
+        int byteSize = input.length * 2;
+        if (byteSize < input.length) {
+            throw new SnappyError(SnappyErrorCode.TOO_LARGE_INPUT, "input array size is too large: " + input.length);
+        }
+        return rawCompress(input, byteSize); // short uses 2 bytes
     }
 
     /**
@@ -598,9 +623,24 @@ public class Snappy
     public static double[] uncompressDoubleArray(byte[] input)
             throws IOException
     {
-        int uncompressedLength = Snappy.uncompressedLength(input, 0, input.length);
+        return uncompressDoubleArray(input, 0, input.length);
+    }
+
+    /**
+     * Uncompress the input as a double array
+     *
+     * @param input
+     * @param offset
+     * @param length
+     * @return the uncompressed data
+     * @throws IOException
+     */
+    public static double[] uncompressDoubleArray(byte[] input, int offset, int length)
+            throws IOException
+    {
+        int uncompressedLength = Snappy.uncompressedLength(input, offset, length);
         double[] result = new double[uncompressedLength / 8];
-        impl.rawUncompress(input, 0, input.length, result, 0);
+        impl.rawUncompress(input, offset, length, result, 0);
         return result;
     }
 

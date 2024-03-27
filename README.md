@@ -1,4 +1,7 @@
-snappy-java [![Build Status](https://travis-ci.org/xerial/snappy-java.svg?branch=master)](https://travis-ci.org/xerial/snappy-java) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/) [![Javadoc](http://javadoc-badge.appspot.com/org.xerial.snappy/snappy-java.svg?label=javadoc)](http://javadoc-badge.appspot.com/org.xerial.snappy/snappy-java) 
+snappy-java
+[![Build Status](https://travis-ci.org/xerial/snappy-java.svg?branch=master)](https://travis-ci.org/xerial/snappy-java)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/)
+[![Javadoc](https://javadoc.io/badge2/org.xerial.snappy/snappy-java/javadoc.svg)](https://javadoc.io/doc/org.xerial.snappy/snappy-java)
 === 
 snappy-java is a Java port of the [snappy](https://github.com/google/snappy), a fast C++ compresser/decompresser developed by Google.
 
@@ -10,7 +13,6 @@ snappy-java is a Java port of the [snappy](https://github.com/google/snappy), a 
   * Compression/decompression of Java primitive arrays (`float[]`, `double[]`, `int[]`, `short[]`, `long[]`, etc.)
      * To improve the compression ratios of these arrays, you can use a fast data-rearrangement implementation ([`BitShuffle`](https://oss.sonatype.org/service/local/repositories/releases/archive/org/xerial/snappy/snappy-java/1.1.8/snappy-java-1.1.8-javadoc.jar/!/org/xerial/snappy/BitShuffle.html)) before compression
   * Portable across various operating systems; Snappy-java contains native libraries built for Window/Mac/Linux, etc. snappy-java loads one of these libraries according to your machine environment (It looks system properties, `os.name` and `os.arch`).
-     * If no native library for your platform is found, snappy-java will fallback to [pure-java implementation](#using-pure-java-snappy-implementation).
   * Simple usage. Add the snappy-java-(version).jar file to your classpath. Then call compression/decompression methods in `org.xerial.snappy.Snappy`.
   * [Framing-format support](https://github.com/google/snappy/blob/master/framing_format.txt) (Since 1.1.0 version)
   * OSGi support
@@ -22,13 +24,14 @@ snappy-java is a Java port of the [snappy](https://github.com/google/snappy), a 
   * Here are some [benchmark results](https://github.com/ning/jvm-compressor-benchmark/wiki), comparing
  snappy-java and the other compressors
  `LZO-java`/`LZF`/`QuickLZ`/`Gzip`/`Bzip2`. Thanks [Tatu Saloranta @cotowncoder](http://twitter.com/#!/cowtowncoder) for providing the benchmark suite.
-  * The benchmark result indicates snappy-java is the fastest compressor/decompressor in Java: http://ning.github.com/jvm-compressor-benchmark/results/canterbury-roundtrip-2011-07-28/index.html
- * The decompression speed is twice as fast as the others: http://ning.github.com/jvm-compressor-benchmark/results/canterbury-uncompress-2011-07-28/index.html
+  * The benchmark result indicates snappy-java is the fastest compressor/decompressor in Java: https://ning.github.io/jvm-compressor-benchmark/results/canterbury-roundtrip-2011-07-28/index.html
+ * The decompression speed is twice as fast as the others: https://ning.github.io/jvm-compressor-benchmark/results/canterbury-uncompress-2011-07-28/index.html
 
 
 ## Download
 
- [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/) [![Javadoc](http://javadoc-badge.appspot.com/org.xerial.snappy/snappy-java.svg?label=javadoc)](http://javadoc-badge.appspot.com/org.xerial.snappy/snappy-java)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.snappy/snappy-java/)
+[![Javadoc](https://javadoc.io/badge2/org.xerial.snappy/snappy-java/javadoc.svg)](https://javadoc.io/doc/org.xerial.snappy/snappy-java)
  
  * [Release Notes](Milestone.md)
 
@@ -140,7 +143,7 @@ snappy-java uses sbt (simple build tool for Scala) as a build tool. Here is a si
 
     $ ./sbt            # enter sbt console
     > ~test            # run tests upon source code change
-    > ~test-only *     # run tests that matches a given name pattern  
+    > ~testOnly        # run tests that matches a given name pattern  
     > publishM2        # publish jar to $HOME/.m2/repository
     > package          # create jar file
     > findbugs         # Produce findbugs report in target/findbugs
@@ -155,6 +158,7 @@ $ ./sbt -Dloglevel=debug
 For the details of sbt usage, see my blog post: [Building Java Projects with sbt](http://xerial.org/blog/2014/03/24/sbt/)
 
 ### Building from the source code
+
 See the [build instruction](https://github.com/xerial/snappy-java/blob/master/BUILD.md). Building from the source code is an option when your OS platform and CPU architecture is not supported. To build snappy-java, you need Git, JDK (1.6 or higher), g++ compiler (mingw in Windows) etc.
 
     $ git clone https://github.com/xerial/snappy-java.git
@@ -167,12 +171,11 @@ When building on Solaris, use `gmake`:
 
 A file `target/snappy-java-$(version).jar` is the product additionally containing the native library built for your platform.
 
+### Creating a new release
+
+GitHub action [https://github.com/xerial/snappy-java/blob/master/.github/workflows/release.yml] will publish a new relase to Maven Central (Sonatype) when a new tag vX.Y.Z is pushed.
+
 ## Miscellaneous Notes
-
-### Using pure-java Snappy implementation
-
-snappy-java can optionally use a pure-java implementation of Snappy based on [aircompressor](https://github.com/airlift/aircompressor/tree/master/src/main/java/io/airlift/compress/snappy). This implementation is selected when no native Snappy library for your platform is found. You can also force using this pure-java implementation by setting a JVM property `org.xerial.snappy.purejava=true` before loading any class of Snappy (e.g., using `-Dorg.xerial.snappy.purejava=true` option when launching JVM).
-
 
 ### Using snappy-java with Tomcat 6 (or higher) Web Server
 

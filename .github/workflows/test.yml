@@ -7,50 +7,46 @@ on:
       - '**.java'
       - '**.sbt'
       - '.github/workflows/*.yml'
+      - '**.so'
+      - '**.dll'
+      - 'src/main/resources/**'
+      - 'project/build.properties'
   push:
     branches:
       - master
+      - main
     paths:
       - '**.scala'
       - '**.java'
       - '**.sbt'
       - '.github/workflows/*.yml'
+      - 'src/main/resources/org/xerial/snappy/**'
+      - 'project/build.properties'
 
 jobs:
   code_format:
     name: code format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: scalafmt test
         run: ./sbt scalafmtCheckAll
-  test:
-    name: test jdk11
+  test-jdk:
+    strategy:
+      matrix:
+        version: [ '8', '11', '17', '21' ]
+    name: test jdk${{ matrix.version }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v10
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          java-version: adopt@1.11
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache
-          key: ${{ runner.os }}-jdk11-${{ hashFiles('**/*.sbt') }}
-          restore-keys: ${{ runner.os }}-jdk11-
-      - name: Test
-        run: ./sbt test
-  test_jdk8:
-    name: test jdk8
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v10
-        with:
-          java-version: adopt@1.8
-      - uses: actions/cache@v1
+          distribution: 'zulu'
+          java-version: ${{ matrix.version }}
+      - uses: actions/cache@v4
         with:
           path: ~/.cache
-          key: ${{ runner.os }}-jdk8-${{ hashFiles('**/*.sbt') }}
-          restore-keys: ${{ runner.os }}-jdk8-
+          key: ${{ runner.os }}-jdk${{ matrix.version }}-${{ hashFiles('**/*.sbt') }}
+          restore-keys: ${{ runner.os }}-jdk${{ matrix.version }}-
       - name: Test
         run: ./sbt test

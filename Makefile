@@ -14,7 +14,8 @@ SNAPPY_CC:=snappy-sinksource.cc snappy-stubs-internal.cc snappy-c.cc snappy.cc
 SNAPPY_SRC_DIR:=$(TARGET)/snappy-$(SNAPPY_VERSION)
 SNAPPY_SRC:=$(addprefix $(SNAPPY_SRC_DIR)/,$(SNAPPY_CC))
 SNAPPY_GIT_REPO_URL:=https://github.com/google/snappy
-SNAPPY_GIT_REV:=537f4ad6240e586970fe554614542e9717df7902 # 1.1.8
+# Change this variable to use a specific git commit
+SNAPPY_GIT_REV:=$(SNAPPY_VERSION)
 SNAPPY_UNPACKED:=$(TARGET)/snappy-extracted.log
 SNAPPY_GIT_UNPACKED:=$(TARGET)/snappy-git-extracted.log
 SNAPPY_CMAKE_CACHE=$(SNAPPY_OUT)/CMakeCache.txt
@@ -79,6 +80,7 @@ $(SNAPPY_GIT_UNPACKED):
 	@mkdir -p $(SNAPPY_SRC_DIR)
 	git clone $(SNAPPY_GIT_REPO_URL) $(SNAPPY_SRC_DIR)
 	git --git-dir=$(SNAPPY_SRC_DIR)/.git --work-tree=$(SNAPPY_SRC_DIR) checkout -b local/snappy-$(SNAPPY_VERSION) $(SNAPPY_GIT_REV)
+	cd $(SNAPPY_SRC_DIR) && git submodule update --init
 	touch $@
 
 $(SNAPPY_CMAKE_CACHE): $(SNAPPY_GIT_UNPACKED)
@@ -140,13 +142,26 @@ NATIVE_DIR:=src/main/resources/org/xerial/snappy/native/$(OS_NAME)/$(OS_ARCH)
 NATIVE_TARGET_DIR:=$(TARGET)/classes/org/xerial/snappy/native/$(OS_NAME)/$(OS_ARCH)
 NATIVE_DLL:=$(NATIVE_DIR)/$(LIBNAME)
 
-snappy-jar-version:=snappy-java-$(shell perl -npe "s/version in ThisBuild\s+:=\s+\"(.*)\"/\1/" version.sbt | sed -e "/^$$/d")
+snappy-jar-version:=snappy-java-$(shell ./script/dynver.sh | cut -d'=' -f2 | sed 's/[ \"]//g')
+
+jar-version:
+	echo $(snappy-jar-version)
 
 native: jni-header snappy-header $(NATIVE_DLL)
 native-nocmake: jni-header $(NATIVE_DLL)
 snappy: native $(TARGET)/$(snappy-jar-version).jar
 
-native-all: native mac64 win32 win64 native-arm linux32 linux64 linux-ppc64le
+native-all: native native-arm clean-docker mac64 win32 win64 linux32 linux64 linux-ppc64le linux-riscv64 linux-s390x
+
+ifdef CI
+# Clean docker images within CI to avoid no space left error
+DOCKER_POST_PROCESS:=docker system prune --all --force --volumes
+else
+DOCKER_POST_PROCESS:=
+endif
+
+clean-docker:
+	$(DOCKER_POST_PROCESS)
 
 $(NATIVE_DLL): $(SNAPPY_OUT)/$(LIBNAME)
 	@mkdir -p $(@D)
@@ -164,6 +179,7 @@ test: $(NATIVE_DLL)
 
 DOCKER_RUN_OPTS:=--rm
 
+
 win32: jni-header
 	./docker/dockcross-windows-x86 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native snappy-header native CROSS_PREFIX=i686-w64-mingw32.static- OS_NAME=Windows OS_ARCH=x86 SNAPPY_CMAKE_OPTS="-DHAVE_SYS_UIO_H=0"'
 
@@ -175,40 +191,54 @@ mac32: jni-header
 	$(MAKE) native OS_NAME=Mac OS_ARCH=x86
 
 mac64: jni-header
-	docker run -it $(DOCKER_RUN_OPTS) -v $$PWD:/workdir -e CROSS_TRIPLE=x86_64-apple-darwin xerial/crossbuild make clean-native native OS_NAME=Mac OS_ARCH=x86_64
+	docker run -i $(DOCKER_RUN_OPTS) -v $$PWD:/workdir -e CROSS_TRIPLE=x86_64-apple-darwin multiarch/crossbuild make clean-native native OS_NAME=Mac OS_ARCH=x86_64
 
 linux32: jni-header
-	docker run $(DOCKER_RUN_OPTS) -ti -v $$PWD:/work xerial/centos5-linux-x86_64-pic bash -c 'make clean-native native-nocmake OS_NAME=Linux OS_ARCH=x86'
+	docker run $(DOCKER_RUN_OPTS) -i -v $$PWD:/work xerial/centos5-linux-x86_64-pic bash -c 'make clean-native native-nocmake OS_NAME=Linux OS_ARCH=x86'
 
 linux64: jni-header
-	docker run $(DOCKER_RUN_OPTS) -ti -v $$PWD:/work xerial/centos5-linux-x86_64-pic bash -c 'make clean-native native-nocmake OS_NAME=Linux OS_ARCH=x86_64'
+	docker run $(DOCKER_RUN_OPTS) -i -v $$PWD:/work xerial/centos5-linux-x86_64-pic bash -c 'make clean-native native-nocmake OS_NAME=Linux OS_ARCH=x86_64'
 
 freebsd64:
 	$(MAKE) native OS_NAME=FreeBSD OS_ARCH=x86_64
 
 # For ARM
-native-arm: linux-arm linux-armv6 linux-armv7 linux-android-arm linux-arm64
+native-arm: linux-arm64 linux-android-arm linux-android-aarch64 linux-arm linux-armv6 linux-armv7 windows-aarch64
 
+
+# TODO: CROSS_PREFIX can be replaced with ${CROSS_ROOT}/bin/${CROSS_TRIPLE}- in Makefile.common
 linux-arm: jni-header
 	./docker/dockcross-armv5 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=/usr/xcc/armv5-unknown-linux-gnueabi/bin//armv5-unknown-linux-gnueabi- OS_NAME=Linux OS_ARCH=arm'
 
 linux-armv6: jni-header
-	./docker/dockcross-armv6 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=arm-linux-gnueabihf- OS_NAME=Linux OS_ARCH=armv6'
+	./docker/dockcross-armv6 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native OS_NAME=Linux OS_ARCH=armv6'
 
 linux-armv7: jni-header
-	./docker/dockcross-armv7 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=/usr/xcc/armv7-unknown-linux-gnueabi/bin/armv7-unknown-linux-gnueabi- OS_NAME=Linux OS_ARCH=armv7'
+	./docker/dockcross-armv7 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native OS_NAME=Linux OS_ARCH=armv7'
 
 linux-android-arm: jni-header
 	./docker/dockcross-android-arm -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=/usr/arm-linux-androideabi/bin/arm-linux-androideabi- OS_NAME=Linux OS_ARCH=android-arm'
 
+linux-android-aarch64: jni-header
+	./docker/dockcross-android-arm64 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native OS_NAME=Linux OS_ARCH=android-aarch64'
+
 linux-ppc64le: jni-header
-	./docker/dockcross-ppc64le -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=powerpc64le-linux-gnu- OS_NAME=Linux OS_ARCH=ppc64le'
+	./docker/dockcross-ppc64le -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=powerpc64le-unknown-linux-gnu- OS_NAME=Linux OS_ARCH=ppc64le'
 
 linux-ppc64: jni-header
-	./docker/dockcross-ppc64 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=powerpc64-linux-gnu- OS_NAME=Linux OS_ARCH=ppc64'
+	./docker/dockcross-ppc64 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=powerpc64-unknown-linux-gnu- OS_NAME=Linux OS_ARCH=ppc64'
 
 linux-arm64: jni-header
-	./docker/dockcross-arm64 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=/usr/xcc/aarch64-unknown-linux-gnueabi/bin/aarch64-unknown-linux-gnueabi- OS_NAME=Linux OS_ARCH=aarch64'
+	./docker/dockcross-arm64 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=aarch64-unknown-linux-gnu- OS_NAME=Linux OS_ARCH=aarch64'
+
+linux-riscv64: jni-header
+	./docker/dockcross-riscv64 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=/usr/xcc/riscv64-unknown-linux-gnu/bin/riscv64-unknown-linux-gnu- OS_NAME=Linux OS_ARCH=riscv64'
+
+linux-s390x: jni-header
+	./docker/dockcross-s390x -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=/usr/xcc/s390x-ibm-linux-gnu/bin/s390x-ibm-linux-gnu- OS_NAME=Linux OS_ARCH=s390x'
+
+windows-aarch64: jni-header
+	./docker/dockcross-windows-arm64 -a $(DOCKER_RUN_OPTS) bash -c 'make clean-native native CROSS_PREFIX=/usr/xcc/aarch64-w64-mingw32-cross/bin/aarch64-w64-mingw32- OS_NAME=Windows OS_ARCH=aarch64'
 
 javadoc:
 	$(SBT) doc

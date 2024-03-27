@@ -19,16 +19,18 @@
 // SnappyTest.java
 // Since: 2011/03/30
 //
-// $URL$ 
+// $URL$
 // $Author$
 //--------------------------------------
 package org.xerial.snappy;
 
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.junit.Assume;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xerial.util.log.Logger;
@@ -328,5 +330,206 @@ public class SnappyTest
         catch (IOException e) {
             _logger.debug(e);
         }
+    }
+
+
+    /*
+    Tests happy cases for SnappyInputStream.read method
+    - {0}
+     */
+    @Test
+    public void isValidChunkLengthForSnappyInputStreamIn()
+            throws Exception {
+        byte[] data = {0};
+        SnappyInputStream in = new SnappyInputStream(new ByteArrayInputStream(data));
+        byte[] out = new byte[50];
+        in.read(out);
+    }
+
+    /*
+    Tests sad cases for SnappyInputStream.read method
+    - Expects a java.lang.NegativeArraySizeException catched into a SnappyError
+    - {-126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, 0, 0, 0, 0, 0, 0, 0, 0,(byte) 0x7f, (byte) 0xff, (byte) 0xff, (byte) 0xff}
+     */
+    @Test(expected = SnappyError.class)
+    public void isInvalidChunkLengthForSnappyInputStreamInNegative()
+            throws Exception {
+        byte[] data = {-126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, 0, 0, 0, 0, 0, 0, 0, 0,(byte) 0x7f, (byte) 0xff, (byte) 0xff, (byte) 0xff};
+        SnappyInputStream in = new SnappyInputStream(new ByteArrayInputStream(data));
+        byte[] out = new byte[50];
+        in.read(out);
+    }
+
+    /*
+    Tests sad cases for SnappyInputStream.read method
+    - Expects a java.lang.OutOfMemoryError
+    - {-126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, 0, 0, 0, 0, 0, 0, 0, 0,(byte) 0x7f, (byte) 0xff, (byte) 0xff, (byte) 0xff}
+     */
+    @Test(expected = SnappyError.class)
+    public void isInvalidChunkLengthForSnappyInputStreamOutOfMemory()
+            throws Exception {
+        byte[] data = {-126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0x7f, (byte) 0xff, (byte) 0xff, (byte) 0xff};
+        SnappyInputStream in = new SnappyInputStream(new ByteArrayInputStream(data));
+        byte[] out = new byte[50];
+        try {
+            in.read(out);
+        } catch (Exception ignored) {
+            // Exception here will be catched
+            // But OutOfMemoryError will not be caught, and will still be thrown
+        }
+    }
+
+    /*
+    Tests sad cases for SnappyInputStream.read method
+    - Expects a failed to compress exception due to upper bounds chunk size
+    - {-126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, 0, 0, 0, 0, 0, 0, 0, 0,(byte) 0x7f, (byte) 0xff, (byte) 0xff, (byte) 0xff}
+     */
+    @Test
+    public void isInvalidChunkLengthForSnappyInputStream()
+            throws Exception {
+        byte[] data = {-126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0x7f, (byte) 0xff, (byte) 0xff, (byte) 0xff};
+        SnappyInputStream in = new SnappyInputStream(new ByteArrayInputStream(data));
+        byte[] out = new byte[50];
+        try {
+            in.read(out);
+        } catch (SnappyError error) {
+            Assert.assertEquals(error.errorCode, SnappyErrorCode.FAILED_TO_UNCOMPRESS);
+        }
+    }
+
+    /*
+    Tests happy cases for BitShuffle.shuffle method
+    - double: 0, 10
+    - float: 0, 10
+    - int: 0, 10
+    - long: 0, 10
+    - short: 0, 10
+     */
+    @Test
+    public void isValidArrayInputLength()
+            throws Exception {
+        byte[] a = Snappy.compress(new char[0]);
+        byte[] b = Snappy.compress(new double[0]);
+        byte[] c = Snappy.compress(new float[0]);
+        byte[] d = Snappy.compress(new int[0]);
+        byte[] e = Snappy.compress(new long[0]);
+        byte[] f = Snappy.compress(new short[0]);
+        byte[] g = Snappy.compress(new char[10]);
+        byte[] h = Snappy.compress(new double[10]);
+        byte[] i = Snappy.compress(new float[10]);
+        byte[] j = Snappy.compress(new int[10]);
+        byte[] k = Snappy.compress(new long[10]);
+        byte[] l = Snappy.compress(new short[10]);
+    }
+
+    /*
+    Tests sad cases for Snappy.compress
+    - Allocate a buffer whose byte size will be a bit larger than Integer.MAX_VALUE
+    - char
+    - double
+    - float
+    - int
+    - long
+    - short
+     */
+    @Test(expected = SnappyError.class)
+    public void isTooLargeDoubleArrayInputLength() throws Exception {
+        assumingCIIsFalse();
+        Snappy.compress(new double[Integer.MAX_VALUE / 8 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeCharArrayInputLength() throws Exception {
+        assumingCIIsFalse();
+        Snappy.compress(new char[Integer.MAX_VALUE / 2 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeFloatArrayInputLength() throws Exception {
+        assumingCIIsFalse();
+        Snappy.compress(new float[Integer.MAX_VALUE / 4 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeIntArrayInputLength() throws Exception {
+        assumingCIIsFalse();
+        Snappy.compress(new int[Integer.MAX_VALUE / 4 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeLongArrayInputLength() throws Exception {
+        assumingCIIsFalse();
+        Snappy.compress(new long[Integer.MAX_VALUE / 8 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeShortArrayInputLength() throws Exception {
+        assumingCIIsFalse();
+        Snappy.compress(new short[Integer.MAX_VALUE / 2 + 1]);
+    }
+
+    /*
+    Tests happy cases for Snappy.compress
+    - char: 0, 10
+    */
+    @Test
+    public void isValidArrayInputLengthForBitShuffleShuffle()
+            throws Exception
+    {
+        byte[] b = BitShuffle.shuffle(new double[0]);
+        byte[] c = BitShuffle.shuffle(new float[0]);
+        byte[] d = BitShuffle.shuffle(new int[0]);
+        byte[] e = BitShuffle.shuffle(new long[0]);
+        byte[] f = BitShuffle.shuffle(new short[0]);
+        byte[] n = BitShuffle.shuffle(new double[10]);
+        byte[] o = BitShuffle.shuffle(new float[10]);
+        byte[] p = BitShuffle.shuffle(new int[10]);
+        byte[] q = BitShuffle.shuffle(new long[10]);
+        byte[] r = BitShuffle.shuffle(new short[10]);
+    }
+
+    /*
+    Tests sad cases for BitShuffle.shuffle method
+    - Allocate a buffer whose byte size will be a bit larger than Integer.MAX_VALUE
+    - double: 8
+    - float: 4
+    - int: 4
+    - long: 8
+    - short: 2
+     */
+    @Test(expected = SnappyError.class)
+    public void isTooLargeDoubleArrayInputLengthForBitShuffleShuffle() throws Exception {
+        assumingCIIsFalse();
+        BitShuffle.shuffle(new double[Integer.MAX_VALUE / 8 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeFloatArrayInputLengthForBitShuffleShuffle() throws Exception {
+        assumingCIIsFalse();
+        BitShuffle.shuffle(new float[Integer.MAX_VALUE / 4 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeIntArrayInputLengthForBitShuffleShuffle() throws Exception {
+        assumingCIIsFalse();
+        BitShuffle.shuffle(new float[Integer.MAX_VALUE / 4 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeLongArrayInputLengthForBitShuffleShuffle() throws Exception {
+        assumingCIIsFalse();
+        BitShuffle.shuffle(new long[Integer.MAX_VALUE / 8 + 1]);
+    }
+
+    @Test(expected = SnappyError.class)
+    public void isTooLargeShortArrayInputLengthForBitShuffleShuffle() throws Exception {
+        assumingCIIsFalse();
+        BitShuffle.shuffle(new short[Integer.MAX_VALUE / 2 + 1]);
+    }
+
+    private void assumingCIIsFalse() {
+        if (System.getenv("CI") == null)
+            return;
+        Assume.assumeFalse("Skipped on CI", System.getenv("CI").equals("true"));
     }
 }
